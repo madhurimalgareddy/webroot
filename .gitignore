@@ -45,6 +45,11 @@ coverage/
 # Dependency directories
 node_modules/
 
+# Python virtual environments
+venv/
+__pycache__/
+*.pyc
+
 # Optional npm cache directory
 .npm
 
