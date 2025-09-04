@@ -3,44 +3,56 @@
 ## Start server or Restart server
 
 ### Start Server
-When you type "start server", run
+When you type "start server", first check if server is already running, then start only if needed:
 
 ```bash
-nohup python -m http.server 8887 > /dev/null 2>&1 &
+# Check if HTTP server is already running on port 8887
+if lsof -ti:8887 > /dev/null 2>&1; then
+  echo "HTTP server already running on port 8887"
+else
+  nohup python -m http.server 8887 > /dev/null 2>&1 &
+  echo "Started HTTP server on port 8887"
+fi
 ```
 
 Note: Uses nohup to run server in background and redirect output to avoid timeout.
 
 
 ### Start Rust API Server
-When you type "start rust", change to the team submodule directory in the repository root and run
+When you type "start rust", first check if server is already running, then start only if needed:
 
 ```bash
-cd team
-# Ensure Rust is installed and cargo is in PATH
-source ~/.cargo/env 2>/dev/null || echo "Install Rust first: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-# Copy .env.example to .env only if .env doesn't exist
-[ ! -f .env ] && cp .env.example .env
-# Start the server with correct binary name
-nohup cargo run --bin partner_tools -- serve > server.log 2>&1 &
+# Check if Rust API server is already running on port 8081
+if lsof -ti:8081 > /dev/null 2>&1; then
+  echo "Rust API server already running on port 8081"
+else
+  cd team
+  # Ensure Rust is installed and cargo is in PATH
+  source ~/.cargo/env 2>/dev/null || echo "Install Rust first: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+  # Copy .env.example to .env only if .env doesn't exist
+  [ ! -f .env ] && cp .env.example .env
+  # Start the server with correct binary name
+  nohup cargo run --bin partner_tools -- serve > server.log 2>&1 &
+  echo "Started Rust API server on port 8081"
+fi
 ```
 
 Note: The team repository is a submodule located in the repository root directory. The Rust API server runs on port 8081. Requires Rust/Cargo to be installed on the system. The .env file is created from .env.example only if it doesn't already exist.
 
-### Update submodules:
-When you type "update submodules", run
+### Pull submodules:
+When you type "pull submodules", run
 ```bash
 # Navigate to webroot first
 cd $(git rev-parse --show-toplevel)
 git submodule update --remote --recursive
 ```
 
-### Commit submodules:
-When you type "commit submodules", run
+### Push submodules:
+When you type "push submodules", run
 ```bash
-./git.sh commit submodules [nopr]
+./git.sh push submodules [nopr]
 ```
-**Note**: This commits all submodules with changes AND updates the webroot parent repository with new submodule references. Includes automatic PR creation on push failures.
+**Note**: This pushes all submodules with changes AND updates the webroot parent repository with new submodule references. Includes automatic PR creation on push failures.
 
 ### PR [submodule name]:
 Create a pull request for a submodule when you lack collaborator privileges:
@@ -54,21 +66,43 @@ cd ..
 
 ## IMPORTANT: Git Commit Policy
 
-**NEVER commit changes without explicit user request.** 
+**NEVER commit changes without an explicit user request starting with push or sync.** 
 
-- Only run git commands (add, commit, push) when the user specifically says "commit" or directly requests it
+- Only run git commands (add, commit, push) when the user specifically says "push" or directly requests it
 - After making code changes, STOP and wait for user instruction
 - Build and test changes as needed, but do not commit automatically
 - The user controls when changes are committed to the repository
 
-## Comprehensive Update Command
+## HTML File Standards
 
-### Update
-When you type "Update", run this comprehensive update workflow that pulls from all parent repos, updates submodules and forks, and prompts for pushes:
+**UTF-8 Character Encoding**: Always include `<meta charset="UTF-8">` in the `<head>` section of new HTML pages to ensure proper character rendering and prevent display issues with special characters.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- other meta tags and content -->
+</head>
+```
+
+**Exceptions**: Do not add charset declarations to redirect pages or template fragments that are included in other pages, as they inherit encoding from their parent documents.
+
+## Comprehensive Pull Command
+
+### Pull / Pull All
+When you type "pull" or "pull all", run this comprehensive pull workflow that pulls from all parent repos, submodules and industry repos:
 
 ```bash
-./git.sh update
+./git.sh pull
 ```
+
+**Legacy Support**: If the user types "update", inform them to use "pull" or "pull all" instead:
+
+*"Please use 'pull' or 'pull all' instead of 'update'. Examples:*
+- *pull - Pull all changes from webroot, submodules, and industry repos*
+- *pull localsite - Pull changes for localsite submodule only*
+- *pull webroot - Pull changes for webroot only"*
 
 All complex git operations are now handled by the git.sh script to avoid shell parsing issues.
 
@@ -82,10 +116,10 @@ gh auth login                     # Log into different GitHub account
 ```
 
 When you switch GitHub accounts, the script will:
-- **Automatically detect** the new user during commit/update operations
+- **Automatically detect** the new user during pull/push operations
 - **Clear cached git credentials** from previous account
 - **Refresh authentication** to use new GitHub CLI credentials  
-- **Update remote URLs** to point to the new user's forks
+- **Change remote URLs** to point to the new user's forks
 - **Create PRs** from the new user's account
 - **Fork repositories** to the new user's account when needed
 
@@ -95,30 +129,41 @@ When you switch GitHub accounts, the script will:
 - Runs `gh auth setup-git` to sync git with GitHub CLI
 - Prevents permission denied errors from stale credentials
 
-**Update Command Features:**
-- **Pull from Parents**: Updates webroot, submodules, and industry repos from their respective ModelEarth parent repositories
+**Pull Command Features:**
+- **Pull from Parents**: Pulls webroot, submodules, and industry repos from their respective ModelEarth parent repositories
 - **Fork-Aware**: Automatically adds upstream remotes for parent repos when working with forks
 - **Partnertools Exclusion**: Completely skips any repositories associated with partnertools GitHub account
 - **Merge Strategy**: Uses automatic merge with no-edit to incorporate upstream changes
 - **Conflict Handling**: Reports merge conflicts for manual resolution when they occur  
-- **Status Reporting**: Provides clear feedback on what was updated and any issues encountered
+- **Status Reporting**: Provides clear feedback on what was pulled and any issues encountered
 - **Push Guidance**: Prompts user with specific commands for pushing changes back to forks and parent repos
 - **Comprehensive Workflow**: Handles webroot, all submodules, and all industry repositories in one command
 
-**Post-Update Recommendations:**
-After running "./git.sh update", review changes and use these commands as needed:
-- `./git.sh commit` - Push all changes (webroot + submodules + forks) with PR creation
-- `./git.sh commit submodules` - Push only submodule changes  
-- `./git.sh commit [specific-name]` - Push changes for a specific repository
+**Post-Pull Recommendations:**
+After running "./git.sh pull", review changes and use these commands as needed:
+- `./git.sh push` - Push all changes (webroot + submodules + forks) with PR creation
+- `./git.sh push submodules` - Push only submodule changes  
+- `./git.sh push [specific-name]` - Push changes for a specific repository
 
 **Git.sh Usage:**
 ```bash
-./git.sh update                    # Full update workflow  
-./git.sh commit                    # Complete commit: webroot, all submodules, and industry repos
-./git.sh commit [name]             # Commit specific submodule
-./git.sh commit submodules         # Commit all submodules only
-./git.sh commit [name] nopr        # Skip PR creation on push failures
+./git.sh pull                      # Full pull workflow  
+./git.sh push                      # Complete push: webroot, all submodules, and industry repos
+./git.sh push [name]               # Push specific submodule
+./git.sh push submodules           # Push all submodules only
+./git.sh push [name] nopr          # Skip PR creation on push failures
 ```
+
+**Individual Repository Commands:**
+```bash
+./git.sh pull [repo_name]          # Pull specific repository (webroot, submodule, or industry repo)
+./git.sh push [repo_name]          # Push specific repository (webroot, submodule, or industry repo)
+```
+
+**Supported Repository Names:**
+- **Webroot**: webroot
+- **Submodules**: cloud, comparison, feed, home, localsite, products, projects, realitystream, swiper, team, trade
+- **Industry Repos**: exiobase, profile, io
 
 
 ## Submodule Management
@@ -135,6 +180,12 @@ This repository contains the following git submodules configured in `.gitmodules
 - **realitystream** - https://github.com/modelearth/realitystream
 - **cloud** - https://github.com/modelearth/cloud
 - **trade** - https://github.com/modelearth/trade
+- **codechat** - https://github.com/modelearth/codechat
+- **exiobase** - https://github.com/modelearth/exiobase
+- **io** - https://github.com/modelearth/io
+- **profile** - https://github.com/modelearth/profile
+- **reports** - https://github.com/modelearth/reports
+- **community-forecasting** - https://github.com/modelearth/community-forecasting
 
 **IMPORTANT**: All directories listed above are git submodules, not regular directories. They appear as regular directories when browsing but are actually git submodule references. Always treat them as submodules in git operations.
 
@@ -153,8 +204,8 @@ git remote add upstream https://github.com/modelearth/trade.git
 git remote add upstream https://github.com/ModelEarth/webroot.git
 ```
 
-**Update Workflow Impact:**
-- The `./git.sh update` command respects this policy and only pulls from modelearth-level repositories
+**Pull Workflow Impact:**
+- The `./git.sh pull` command respects this policy and only pulls from modelearth-level repositories
 - If any upstream is incorrectly configured to point above modelearth level, it must be corrected
 - This prevents conflicts from pulling changes from repositories outside the modelearth ecosystem
 
@@ -193,15 +244,22 @@ git remote -v
 
 **Common Issue**: If submodule commands fail or you get "pathspec did not match" errors, you're likely in a submodule directory instead of the webroot. Navigate back to your webroot directory using your system's actual webroot path before running any commands.
 
-### IMPORTANT: "commit [name]" Command Requirements
-When a user says "commit [name]", use the git.sh script:
+### IMPORTANT: "push [name]" Command Requirements
+When a user says "push [name]", use the git.sh script:
 
 ```bash
-./git.sh commit [name] [nopr]
+./git.sh push [name] [nopr]
 ```
 
+**Legacy Support**: If the user says "commit [name]", inform them to use "push [name]" instead:
+
+*"Please use 'push [name]' instead of 'commit [name]'. Examples:*
+- *push localsite - Push changes for localsite submodule*
+- *push webroot - Push changes for webroot only*
+- *push all - Push all repositories with changes"*
+
 The git.sh script handles all the complex logic including:
-- Submodule detection and committing
+- Submodule detection and pushing
 - Automatic PR creation on push failures  
 - Webroot submodule reference updates
 - Support for 'nopr' flag to skip PR creation
@@ -264,14 +322,18 @@ fi
 - Requires GitHub CLI (gh) for PR creation functionality
 
 ### Quick Commands for Repositories
-- **"commit [name] [nopr]"**: Intelligent commit with PR fallback - tries submodule → standalone repo → webroot fallback
-- **"push [submodule name]"**: Only push submodule changes (steps 1-3)
+- **"push [name] [nopr]"**: Intelligent push with PR fallback - tries submodule → standalone repo → webroot fallback
+- **"pull [name]"**: Pull changes for specific repository (webroot, submodule, or extra repo)
 - **"PR [submodule name]"**: Create pull request workflow
-- **"commit submodules [nopr]"**: Commit all submodules with PR fallback when push fails
-- **"commit forks [nopr]"**: Commit all industry repo forks and create PRs to parent repos
-- **"commit [nopr]"**: Complete commit workflow with PR fallback - commits webroot, all submodules, and all forks
+- **"push submodules [nopr]"**: Push all submodules with PR fallback when push fails
+- **"push forks [nopr]"**: Push all extra repo forks and create PRs to parent repos
+- **"push [nopr]"** or **"push all [nopr]"**: Complete push workflow with PR fallback - pushes webroot, all submodules, and all forks
 
-**PR Fallback Behavior**: All commit commands automatically create pull requests when direct push fails due to permission restrictions. Add 'nopr' or 'No PR' (case insensitive) at the end of any commit command to skip PR creation.
+**PR Fallback Behavior**: All push commands automatically create pull requests when direct push fails due to permission restrictions. Add 'nopr' or 'No PR' (case insensitive) at the end of any push command to skip PR creation.
+
+**Legacy Command Support**: If users type "commit" or "update", inform them of the new commands:
+- "commit" → "push" 
+- "update" → "pull" or "pull all"
 
 When displaying "Issue Resolved" use the same checkbox icon as "Successfully Updated"
 
@@ -284,6 +346,24 @@ When displaying "Issue Resolved" use the same checkbox icon as "Successfully Upd
 - **NEVER add "🤖 Generated with [Claude Code]" or similar footers**
 - Keep commit messages clean and focused on the actual changes
 - Include a brief summary of changes in the commit text
+
+## DOM Element Waiting
+- **NEVER use setTimeout() for waiting for DOM elements**
+- **ALWAYS use waitForElm(selector)** from localsite/js/localsite.js instead
+- Check if localsite/js/localsite.js is included in the page before using waitForElm
+- If not included, ask user if localsite/js/localsite.js should be added to the page
+- Example: `waitForElm('#element-id').then(() => { /* code */ });`
+- waitForElm does not use timeouts and waits indefinitely until element appears
+
+## Navigation Guidelines
+- **Directory Restrictions**: If the user requests `cd ../`, first check if you are already in the webroot. If so, ignore the request so errors do not appear.
+- **Webroot Detection**: Use `git rev-parse --show-toplevel` or check current working directory against `/Users/helix/Library/Data/webroot` pattern
+- **Security Boundaries**: Claude Code sessions are restricted to working within the webroot and its subdirectories
+
+## Git Command Guidelines
+- **Always Use git.sh**: When receiving "push" and "pull" requests, always use `./git.sh push` and `./git.sh pull` to avoid approval prompts
+- **Avoid Direct Git Commands**: Do not use individual git commands like `git add`, `git commit`, `git push` for these operations
+- **Automatic Workflow**: The git.sh script handles the complete workflow including submodules, remotes, and error handling automatically
 
 ## Quick Commands
 
@@ -315,35 +395,34 @@ When you type "confirm" or "less quick", remove it:
 ]
 ```
 
-## Industry Repositories
+## Extra Repositories
 
-### Industry Repo List
-The following industry repositories are used for multi-regional input-output (MRIO) analysis:
-- **trade** - https://github.com/modelearth/trade (submodule)
-- **exiobase** - https://github.com/modelearth/exiobase
-- **profile** - https://github.com/modelearth/profile
-- **io** - https://github.com/modelearth/io
+### Extra Repo List
+The following extra repositories are used for specialized functionality and are cloned to the webroot root directory (not submodules):
+- **community** - https://github.com/modelearth/community
+- **nisar** - https://github.com/modelearth/nisar
+- **data-pipeline** - https://github.com/modelearth/data-pipeline
 
-**IMPORTANT**: The industry repos (except trade) are cloned to the webroot root directory. They are not submodules, since typical sites only use industry output via the existing comparison submodule.
+**IMPORTANT**: These extra repos are cloned to the webroot root directory and are NOT submodules. They provide specialized functionality that is not needed for typical site deployments.
 
-### Fork Industry Repos
+### Fork Extra Repos
 
 ```bash
-fork industry repos to [your github account]
+fork extra repos to [your github account]
 ```
 
 The above runs these commands:
 ```bash
 # Fork repositories using GitHub CLI (requires 'gh' to be installed and authenticated)
-gh repo fork modelearth/exiobase --clone=false
-gh repo fork modelearth/profile --clone=false
-gh repo fork modelearth/io --clone=false
+gh repo fork modelearth/community --clone=false
+gh repo fork modelearth/nisar --clone=false
+gh repo fork modelearth/data-pipeline --clone=false
 ```
 
-### Clone Industry Repos
+### Clone Extra Repos
 
 ```bash
-clone industry repos from [your github account]
+clone extra repos from [your github account]
 ```
 
 The above runs these commands:
@@ -351,19 +430,19 @@ The above runs these commands:
 # Navigate to webroot repository root first
 cd $(git rev-parse --show-toplevel)
 
-# Clone industry repos to webroot root
-git clone https://github.com/[your github account]/exiobase exiobase
-git clone https://github.com/[your github account]/profile profile
-git clone https://github.com/[your github account]/io io
+# Clone extra repos to webroot root
+git clone https://github.com/[your github account]/community community
+git clone https://github.com/[your github account]/nisar nisar
+git clone https://github.com/[your github account]/data-pipeline data-pipeline
 ```
 
-### Commit All Submodules
+### Push All Submodules
 
 ```bash
-commit submodules [nopr]
+push submodules [nopr]
 ```
 
-The above commits changes to all submodules that have uncommitted changes:
+The above pushes changes to all submodules that have uncommitted changes:
 ```bash
 # Navigate to webroot repository root first and detect no-PR flag
 cd $(git rev-parse --show-toplevel)
@@ -403,13 +482,13 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 ```
 
-### Commit Industry Repo Forks
+### Push Extra Repo Forks
 
 ```bash
-commit forks [nopr]
+push forks [nopr]
 ```
 
-The above commits changes to all industry repo forks and creates pull requests to their parent repositories:
+The above pushes changes to all extra repo forks and creates pull requests to their parent repositories:
 ```bash
 # Navigate to webroot repository root first and detect no-PR flag
 cd $(git rev-parse --show-toplevel)
@@ -418,8 +497,8 @@ if [[ "$*" =~ (nopr|no\ pr)$ ]] || [[ "$*" =~ (NOPR|NO\ PR)$ ]]; then
   SKIP_PR=true
 fi
 
-# Check each industry repo for changes and create PRs
-for repo in exiobase profile io; do
+# Check each extra repo for changes and create PRs
+for repo in community nisar data-pipeline; do
   if [ -d "$repo" ]; then
     cd "$repo"
     if [ -n "$(git status --porcelain)" ]; then
@@ -448,7 +527,7 @@ for repo in exiobase profile io; do
 done
 ```
 
-**Note**: This command requires GitHub CLI (gh) to be installed and authenticated for PR creation. It will create PRs for all industry repo forks unless 'nopr' is specified. Use 'commit forks nopr' to skip PR creation.
+**Note**: This command requires GitHub CLI (gh) to be installed and authenticated for PR creation. It will create PRs for all extra repo forks unless 'nopr' is specified. Use 'push forks nopr' to skip PR creation.
 
 **Common Issues:**
 - **Repository moved errors**: Update remote URLs if you see "This repository moved" messages:
@@ -458,13 +537,19 @@ done
   ```
 - **GitHub CLI authentication**: Run `gh auth login` to authenticate with GitHub before using PR features
 
-### Complete Commit Workflow
+### Complete Push Workflow
 
 ```bash
-commit [nopr]
+push [nopr]
 ```
 
-The above runs a comprehensive commit workflow that handles webroot, all submodules, and all industry repo forks with automatic PR creation:
+or
+
+```bash
+push all [nopr]
+```
+
+The above runs a comprehensive push workflow that handles webroot, all submodules, and all extra repo forks with automatic PR creation:
 
 ```bash
 # Navigate to webroot repository root first and detect no-PR flag
@@ -513,8 +598,8 @@ if [ -n "$(git status --porcelain)" ]; then
   fi
 fi
 
-# Step 4: Commit industry repo forks and create PRs
-for repo in exiobase profile io; do
+# Step 4: Push extra repo forks and create PRs
+for repo in community nisar data-pipeline; do
   if [ -d "$repo" ]; then
     cd "$repo"
     if [ -n "$(git status --porcelain)" ]; then
@@ -543,7 +628,23 @@ for repo in exiobase profile io; do
 done
 ```
 
-**Note**: This is the most comprehensive commit command that handles all repository types in the webroot ecosystem with automatic PR fallback when push permissions are denied. Use 'commit nopr' to skip all PR creation. It will only process repositories that have actual changes.
+**Note**: This is the most comprehensive push command that handles all repository types in the webroot ecosystem with automatic PR fallback when push permissions are denied. Use 'push nopr' or 'push all nopr' to skip all PR creation. It will only process repositories that have actual changes.
+
+**Extra Repo Change Detection**: After completing the push workflow, the system automatically checks extra repos (community, nisar, data-pipeline) for uncommitted changes since they are excluded from webroot commits by .gitignore. If changes are found, the user is prompted to choose which extra repo to push:
+
+```
+📝 Extra repos with uncommitted changes detected:
+
+  1) community
+  2) nisar
+  3) all
+
+Which extra repo would you like to push? (1-3 or press Enter to skip):
+```
+
+- Choose **1-2** to push a specific extra repo
+- Choose **3** (or highest number) to push **all** extra repos with changes  
+- Press **Enter** to skip extra repo pushing
 
 
 ### Background Development Rust Server resides in "team" submodule folder (ALWAYS USE THIS)

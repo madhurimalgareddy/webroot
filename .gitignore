@@ -1,18 +1,21 @@
-# Repos that are not submodules
+# Extra repos that are not submodules
 apps
-profile
-exiobase
 trade-data
 useeio.js
-io
-codechat
 membersense
 data-commons
-data-pipeline
-community
 community-data
 community-timelines
-USEEIO
+requests
+wiki
+panels
+topojson
+useeio-json
+useeio
+community
+nisar
+products-big-files-to-delete
+data-pipeline
 
 # Configuration files
 config/settings.js
